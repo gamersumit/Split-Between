@@ -48,8 +48,9 @@ INSTALLED_APPS = [
     'drf_yasg',
 
     # project apps
-    'group',
     'user',
+    'group',
+    'expense',
 ]
 
 MIDDLEWARE = [
