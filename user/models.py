@@ -1,8 +1,10 @@
 import datetime
+from django.forms import ValidationError
 from django.utils import timezone
 from django.db import models
 import uuid
 from django.contrib.auth.models import AbstractUser
+from django.db.models import CheckConstraint, Q
 from django.db import transaction
 
 # Create your models here.
@@ -21,48 +23,57 @@ class User(AbstractUser):
     - __str__: Returns the username of the user.
     """
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False) 
     avatar = models.URLField(null = True, blank = True)
     email = models.EmailField(unique=True, null = False, blank = False)
     is_deleted = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     unseen_total_activities = models.PositiveIntegerField(default=0, null=True, blank=True)
-    
-    friends = models.ManyToManyField('self', symmetrical=True, through='Friendship', null=True, blank=True)
-   
-   
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
     def __str__(self):
         return self.username
   
-class Friendship(models.Model):
+class Balance(models.Model):
     """
-    Model representing a friendship between two users.
-    - user1: ForeignKey to the User model, representing one user in the friendship.
-    - user2: ForeignKey to the User model, representing the other user in the friendship.
-    - created_at: DateTime field for the timestamp when the friendship was created.
-    - balence: Float field for tracking the balance between two users, default is 0.
+    Model representing a balance between two users.
+
+    Fields:
+    - friend_owes: ForeignKey to the User model, representing one user who owes the balance.
+    - friend_owns: ForeignKey to the User model, representing the other user who owns the balance.
+    - created_at: DateTime field for the timestamp when the balance record was created.
+    - balance: Float field for tracking the balance amount between two users, default is 0.
 
     Methods:
-    - __str__: Returns a string representation of the friendship indicating the balance.
+    - __str__: Returns a string representation indicating the balance between friends.
 
     Meta:
-    - unique_together: Ensures that each pair of users has a unique friendship record.
+    - unique_together: Ensures that each pair of users has a unique balance record.
+    - CheckConstraint: Ensures friend_owes and friend_owns are different users.
+
+    Signals:
+    - pre_save: Signal receiver `check_bidirectional_friendship` ensures bidirectional uniqueness
+      in the Balance model before saving new instances.
+
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship')
-    friend = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_set')
-    created_at = models.DateTimeField(auto_now_add = True)
-    balance = models.FloatField(default=0)
+    friend_owes = models.ForeignKey(User, on_delete=models.CASCADE, editable= False, related_name='balence_owes')
+    friend_owns = models.ForeignKey(User, on_delete=models.CASCADE, editable=False, related_name='balence_owns')
+    created_at = models.DateTimeField(auto_now_add = True, editable=False)
+    balance = models.FloatField(default=0)   
+
 
     def __str__(self):
-        return f"{self.user.username} owes {self.friend.username} : {self.balance} amount."
+        return f"{self.friend_owes.username} owes {self.friend_owns.username} : {self.balance} amount."
     
     
     class Meta:
-        unique_together = ('user', 'friend')
-
+        unique_together = ('friends_owes', 'friend_owns')
+        CheckConstraint(
+                name='different_users',
+                check=~Q(friend_owes=models.F('friend_owns')),  # friend_owes != friend_owns
+            ),
 class ForgotPasswordOTP(models.Model):
     """
     Model for storing OTPs for password reset functionality.
@@ -79,6 +90,11 @@ class ForgotPasswordOTP(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def isExpired(self):
+        """
+        Checks if the OTP has expired (older than 5 minutes) and deletes it if expired.
+        Returns True if expired, False otherwise.
+        """
+
         # Get the current time with timezone information
         five_minute_ago = timezone.now() - datetime.timedelta(minutes=5)
         
@@ -113,6 +129,11 @@ class MailVerificationToken(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def isExpired(self):
+        """
+        Checks if the OTP has expired (older than 5 minutes) and deletes it if expired.
+        Returns True if expired, False otherwise.
+        """
+
         # Get the current time with timezone information
         five_minute_ago = timezone.now() - datetime.timedelta(minutes=5)
         
