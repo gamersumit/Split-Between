@@ -27,13 +27,16 @@ class User(AbstractUser):
     is_deleted = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     unseen_total_activities = models.PositiveIntegerField(default=0, null=True, blank=True)
+    
+    friends = models.ManyToManyField('self', symmetrical=True, through='Friendship', null=True, blank=True)
+   
+   
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
     def __str__(self):
         return self.username
   
-
 class Friendship(models.Model):
     """
     Model representing a friendship between two users.
@@ -48,32 +51,17 @@ class Friendship(models.Model):
     Meta:
     - unique_together: Ensures that each pair of users has a unique friendship record.
     """
-    user1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship')
-    user2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friends')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendship')
+    friend = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_set')
     created_at = models.DateTimeField(auto_now_add = True)
-    balence = models.FloatField(default=0)
+    balance = models.FloatField(default=0)
 
     def __str__(self):
-        return f"{self.user1.username} owes {self.user2.username} {self.balence}."
+        return f"{self.user.username} owes {self.friend.username} : {self.balance} amount."
     
-    def bulk_add_friend(user, friends):
-        """
-        Add a user to multiple friends' lists and ensure bidirectional friendships.
-
-        :param user: User instance to be added to friends' lists.
-        :param friends: List of User instances to whom the user should be added as a friend.
-        """
-        with transaction.atomic():
-            friendships = []
-            for friend in friends:
-                if not Friendship.objects.filter(user1=user, user2=friend).exists():
-                    friendships.append(Friendship(user1=user, user2=friend))
-                if not Friendship.objects.filter(user1=friend, user2=user).exists():
-                    friendships.append(Friendship(user1=friend, user2=user))
-
-            Friendship.objects.bulk_create(friendships)
+    
     class Meta:
-        unique_together = ('user1', 'user2')
+        unique_together = ('user', 'friend')
 
 class ForgotPasswordOTP(models.Model):
     """
