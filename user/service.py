@@ -4,9 +4,29 @@ from django.db.models import Q
 from django.db import transaction
 
 class FriendshipService:
+    
+    @staticmethod
+    def get_balances_for_user_and_friends(user):
+        """
+        Retrieve balances where the specified user is either the 'friend_owes' or 'friend_owns'.
+
+        Args:
+        user (User): The user for whom balances are retrieved.
+
+        Returns:
+        QuerySet: QuerySet of Balance objects where 'user' is either 'friend_owes' or 'friend_owns'.
+
+        Example:
+        ```
+        user = User.objects.get(username='example_user')
+        balances = FriendshipService.get_balances_for_user_and_friends(user)
+        ```
+        """
+        balences = Balance.objects.filter(Q(friend_owes=user) | Q(friend_owns=user))
+        return balences
 
     @staticmethod
-    def get_balances_for_user_and_friends(user, friend_ids):
+    def get_balances_for_user_and_specific_friends(user, friend_ids):
         """
         Retrieve balance objects between a user and their friends based on friend IDs.
 
@@ -50,11 +70,30 @@ class FriendshipService:
 
         Args:
         payer (User): The user making the payments.
-        payments (list of tuples): List of tuples where each tuple contains (friend, amount_paid).
+        payments (dict): Dictionary where keys are User instances representing friends,
+                        and values are amounts paid (float).
+
+        Example:
+        ```
+        payer = User.objects.get(username='example_payer')
+        payments = {
+            User.objects.get(username='friend1'): 50.0,
+            User.objects.get(username='friend2'): 30.0,
+            User.objects.get(username='friend3'): 20.0,
+        }
+        FriendshipService.bulk_update_balances(payer, payments)
+        ```
+
+        Process:
+        - Uses `transaction.atomic()` to ensure all operations are atomic, meaning they succeed or fail together.
+        - Calls `FriendshipService.get_balances_for_user_and_specific_friends()` to retrieve relevant Balance objects.
+        - Iterates through the retrieved friends and updates their balances based on whether they owe or are owed by `payer`.
+        - Saves the updated balances in bulk to minimize database queries using `QuerySet.update()`.
+
         """
         with transaction.atomic():
             # Retrieve or create the corresponding Friendship instance
-            friends = FriendshipService.get_balances_for_user_and_friends(user = payer, friend_ids= payments.keys())
+            friends = FriendshipService.get_balances_for_user_and_specific_friends(user = payer, friend_ids= payments.keys())
             for friend in  friends:
                 if friend.friend_owes == payer :
                     friend.balance += payments[f'{friend.friend_owns.id}']

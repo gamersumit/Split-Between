@@ -54,7 +54,6 @@ class Group(models.Model):
     total_spending = models.FloatField(default=0)
     is_simplified = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
-
     def __str__(self):
         return self.group_name
 
@@ -75,9 +74,9 @@ class Membership(models.Model):
         date_joined (DateTimeField): The date and time when the user joined the group.
     """
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='members')
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='membership')
-    added_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='added_membership')
+    user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='members')
+    group = models.ForeignKey(Group, editable=False, on_delete=models.CASCADE, related_name='membership')
+    added_by = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='added_membership')
     invitation_accepted = models.BooleanField(default=False)
     date_joined = models.DateTimeField(null = True, blank=True)
 
@@ -87,5 +86,5 @@ class Membership(models.Model):
     
 
 
-class Activity(models.Model):
-    activity_types = ()
+# class Activity(models.Model):
+#     activity_types = ()
