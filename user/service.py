@@ -1,4 +1,4 @@
-from .models import User, Balance
+from .models import User, Friendship
 from django.db import transaction
 from django.db.models import Q
 from django.db import transaction
@@ -29,7 +29,7 @@ class FriendshipService:
     @staticmethod
     def bulk_add_friends(user, friends):
         """
-        Bulk create Balance objects to represent friendships between a user and multiple friends.
+        Bulk create Friendship objects to represent friendships between a user and multiple friends.
 
         Args:
         user (User): The user initiating the friendships.
@@ -38,10 +38,14 @@ class FriendshipService:
         Note:
         Excludes the user itself from being added as a friend.
         """
-        friendships = [Balance(friend_owes=user, friend_owns=friend) for friend in friends if friend != user]
+        friendships = [
+            Friendship(user=user, friend=friend)
+            for friend in friends
+            if friend != user  # Ensure user cannot be their own friend
+        ]
 
         with transaction.atomic():
-            Balance.objects.bulk_create(friendships)
+            Friendship.objects.bulk_create(friendships)
 
     @staticmethod
     def bulk_update_balances(payer, payments):

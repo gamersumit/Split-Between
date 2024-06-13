@@ -28,6 +28,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, null = False, blank = False)
     is_deleted = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    friend = models.ManyToManyField('self', symmetrical=True, null=True, blank=False, through = 'Friendship')
     unseen_total_activities = models.PositiveIntegerField(default=0, null=True, blank=True)
 
     USERNAME_FIELD = 'email'
@@ -35,45 +36,80 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
-  
-class Balance(models.Model):
+    
+
+class Friendship(models.Model):
     """
-    Model representing a balance between two users.
-
-    Fields:
-    - friend_owes: ForeignKey to the User model, representing one user who owes the balance.
-    - friend_owns: ForeignKey to the User model, representing the other user who owns the balance.
-    - created_at: DateTime field for the timestamp when the balance record was created.
-    - balance: Float field for tracking the balance amount between two users, default is 0.
-
-    Methods:
-    - __str__: Returns a string representation indicating the balance between friends.
+    Model representing a friendship relationship between two users.
+    
+    - user: ForeignKey to the User model, representing the user who initiates the friendship.
+    - friend: ForeignKey to the User model, representing the user who is the friend of the 'user'.
+    - created_at: DateTimeField for the timestamp when the friendship record was created.
 
     Meta:
-    - unique_together: Ensures that each pair of users has a unique balance record.
-    - CheckConstraint: Ensures friend_owes and friend_owns are different users.
+    - unique_together: Ensures that each pair of (user, friend) is unique, preventing duplicate friendships.
+    - constraints: Enforces a CheckConstraint to ensure that 'user' and 'friend' are different users.
 
-    Signals:
-    - pre_save: Signal receiver `check_bidirectional_friendship` ensures bidirectional uniqueness
-      in the Balance model before saving new instances.
+    Example usage:
+    ```
+    # Create a friendship record
+    user1 = User.objects.get(username='user1')
+    user2 = User.objects.get(username='user2')
+    Friendship.objects.create(user=user1, friend=user2)
+    ```
 
     """
-    friend_owes = models.ForeignKey(User, on_delete=models.CASCADE, editable= False, related_name='balence_owes')
-    friend_owns = models.ForeignKey(User, on_delete=models.CASCADE, editable=False, related_name='balence_owns')
-    created_at = models.DateTimeField(auto_now_add = True, editable=False)
-    balance = models.FloatField(default=0)   
+    user = models.ForeignKey(User, related_name='friendship')
+    friend = models.ForeignKey(User, related_name='friends_set')
+    created_at = models.DateTimeField(auto_now_add=True)
 
-
-    def __str__(self):
-        return f"{self.friend_owes.username} owes {self.friend_owns.username} : {self.balance} amount."
-    
-    
     class Meta:
-        unique_together = ('friends_owes', 'friend_owns')
-        CheckConstraint(
+        unique_together = ('user', 'friends')
+        constraints = [
+            CheckConstraint(
                 name='different_users',
-                check=~Q(friend_owes=models.F('friend_owns')),  # friend_owes != friend_owns
+                check=~Q(user=models.F('friend')),  # user != friend
             ),
+        ]
+
+# class Balance(models.Model):
+#     """
+#     Model representing a balance between two users.
+
+#     Fields:
+#     - friend_owes: ForeignKey to the User model, representing one user who owes the balance.
+#     - friend_owns: ForeignKey to the User model, representing the other user who owns the balance.
+#     - created_at: DateTime field for the timestamp when the balance record was created.
+#     - balance: Float field for tracking the balance amount between two users, default is 0.
+
+#     Methods:
+#     - __str__: Returns a string representation indicating the balance between friends.
+
+#     Meta:
+#     - unique_together: Ensures that each pair of users has a unique balance record.
+#     - CheckConstraint: Ensures friend_owes and friend_owns are different users.
+
+#     Signals:
+#     - pre_save: Signal receiver `check_bidirectional_friendship` ensures bidirectional uniqueness
+#       in the Balance model before saving new instances.
+
+#     """
+#     friend_owes = models.ForeignKey(User, on_delete=models.CASCADE, editable= False, related_name='balence_owes')
+#     friend_owns = models.ForeignKey(User, on_delete=models.CASCADE, editable=False, related_name='balence_owns')
+#     created_at = models.DateTimeField(auto_now_add = True, editable=False)
+#     balance = models.FloatField(default=0)   
+
+
+#     def __str__(self):
+#         return f"{self.friend_owes.username} owes {self.friend_owns.username} : {self.balance} amount."
+    
+    
+#     class Meta:
+#         unique_together = ('friends_owes', 'friend_owns')
+#         CheckConstraint(
+#                 name='different_users',
+#                 check=~Q(friend_owes=models.F('friend_owns')),  # friend_owes != friend_owns
+#             ),
 class ForgotPasswordOTP(models.Model):
     """
     Model for storing OTPs for password reset functionality.
