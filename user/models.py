@@ -28,15 +28,16 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, null = False, blank = False)
     is_deleted = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    full_name = models.CharField(null=False, blank=False, max_length=50)
     unseen_total_activities = models.PositiveIntegerField(default=0, null=True, blank=True)
-
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
     def __str__(self):
         return self.username
   
-class Balance(models.Model):
+class Friendship(models.Model):
     """
     Model representing a balance between two users.
 
@@ -44,8 +45,7 @@ class Balance(models.Model):
     - friend_owes: ForeignKey to the User model, representing one user who owes the balance.
     - friend_owns: ForeignKey to the User model, representing the other user who owns the balance.
     - created_at: DateTime field for the timestamp when the balance record was created.
-    - balance: Float field for tracking the balance amount between two users, default is 0.
-
+    
     Methods:
     - __str__: Returns a string representation indicating the balance between friends.
 
@@ -55,17 +55,17 @@ class Balance(models.Model):
 
     Signals:
     - pre_save: Signal receiver `check_bidirectional_friendship` ensures bidirectional uniqueness
-      in the Balance model before saving new instances.
+      in the Friendship model before saving new instances.
 
     """
-    friend_owes = models.ForeignKey(User, on_delete=models.CASCADE, editable= False, related_name='balence_owes')
-    friend_owns = models.ForeignKey(User, on_delete=models.CASCADE, editable=False, related_name='balence_owns')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False) 
+    friend_owes = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, editable= False, related_name='balence_owes')
+    friend_owns = models.ForeignKey(User, editable = False, on_delete=models.CASCADE, editable=False, related_name='balence_owns')
     created_at = models.DateTimeField(auto_now_add = True, editable=False)
-    balance = models.FloatField(default=0)   
 
 
     def __str__(self):
-        return f"{self.friend_owes.username} owes {self.friend_owns.username} : {self.balance} amount."
+        return f"{self.friend_owes.username} <--- F R I E N D S H I P ---> {self.friend_owns.username}"
     
     
     class Meta:
@@ -85,7 +85,7 @@ class ForgotPasswordOTP(models.Model):
     - isExpired: Checks if the OTP has expired (older than 5 minutes) and deletes it if expired.
     - __str__: Returns a string representation indicating the user the OTP is for.
     """
-    user_id = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
+    user_id = models.OneToOneField(User, on_delete=models.CASCADE, editable=False, unique=True)
     otp = models.PositiveIntegerField(null=True, blank=False)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -124,7 +124,7 @@ class MailVerificationToken(models.Model):
     - __str__: Returns a string representation indicating the user the token is for.
     """
 
-    user_id = models.OneToOneField(User, related_name= 'verification_token', on_delete=models.CASCADE, unique=True)
+    user_id = models.OneToOneField(User, editable=False, related_name= 'verification_token', on_delete=models.CASCADE, unique=True)
     token = models.CharField(128)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -43,10 +43,10 @@ class Expense(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    expense_type = models.CharField(max_length=40, choices=EXPENSE_CHOICES)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='expenses')
+    expense_type = models.CharField(max_length=40, choices=EXPENSE_CHOICES, editable=False)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='expenses', editable=False)
     paid_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_owners')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_creators')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_creators', editable=False)
     settled_with = models.OneToOneField(User, on_delete=models.CASCADE, related_name='expense_settled_with', null=True, blank=True)
     total_amount = models.FloatField(null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True)
