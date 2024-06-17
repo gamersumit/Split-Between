@@ -31,12 +31,12 @@ def check_bidirectional_friendship(sender, instance, **kwargs):
 
 
 
-@receiver(post_save, sender = Friendship)
-def friendship_creation_activity(sender, instance, created, **kwargs):
-    if created:
-        activity = ActivityService.create_activity(
-            type = 'friend_added',
-            users = [instance.friend_owes, instance.friend_own],
-            metadata = {'friends' : ['userserializer([instance.friend_owes, instance.friend_owns], many = True).data']},
-            )
+# @receiver(post_save, sender = Friendship)
+# def friendship_creation_activity(sender, instance, created, **kwargs):
+#     if created:
+#         activity = ActivityService.create_activity(
+#             type = 'friend_added',
+#             users = [instance.friend_owes, instance.friend_own],
+#             metadata = {'friends' : ['userserializer([instance.friend_owes, instance.friend_owns], many = True).data']},
+#             )
         

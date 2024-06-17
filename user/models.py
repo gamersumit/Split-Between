@@ -74,6 +74,7 @@ class Friendship(models.Model):
                 name='different_users',
                 check=~Q(friend_owes=models.F('friend_owns')),  # friend_owes != friend_owns
             ),
+
 class ForgotPasswordOTP(models.Model):
     """
     Model for storing OTPs for password reset functionality.
@@ -85,7 +86,7 @@ class ForgotPasswordOTP(models.Model):
     - isExpired: Checks if the OTP has expired (older than 5 minutes) and deletes it if expired.
     - __str__: Returns a string representation indicating the user the OTP is for.
     """
-    user_id = models.OneToOneField(User, on_delete=models.CASCADE, editable=False, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, editable=False, unique=True)
     otp = models.PositiveIntegerField(null=True, blank=False)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -110,7 +111,7 @@ class ForgotPasswordOTP(models.Model):
         return False
     
     def __str__(self):
-        return f"FORGOT PASSWORD OTP for {self.user_id.username}"
+        return f"FORGOT PASSWORD OTP for {self.user.username}"
     
 class MailVerificationToken(models.Model):
     """
@@ -124,7 +125,7 @@ class MailVerificationToken(models.Model):
     - __str__: Returns a string representation indicating the user the token is for.
     """
 
-    user_id = models.OneToOneField(User, editable=False, related_name= 'verification_token', on_delete=models.CASCADE, unique=True)
+    user = models.OneToOneField(User, editable=False, related_name= 'verification_token', on_delete=models.CASCADE, unique=True)
     token = models.CharField(128)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -149,4 +150,4 @@ class MailVerificationToken(models.Model):
         return False
     
     def __str__(self):
-        return f"Verification token for {self.user_id.username}"
+        return f"Verification token for {self.user.username}"

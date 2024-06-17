@@ -1,9 +1,10 @@
 from user.models import Friendship
-from .models import Activity
+from user.serializers import UserMiniProfileSerializer
+from .models import Activity, GroupBalance
 from django.db.models import Q
 from django.db import transaction
 from datetime import datetime
-
+from django.db.models import Sum, F, Case, When, Value
 class GroupService:
 
     @staticmethod
@@ -37,6 +38,33 @@ class GroupService:
         ).exists()
 
     @staticmethod
+    def get_group_member_balances(group):
+        # Annotate each user's total amount owed and owned within the group
+        balances = GroupBalance.objects.filter(group=group).values(
+            'friendship__friend_owes'
+        ).annotate(
+            total_owes=Sum(
+                Case(
+                    When(friendship__friend_owes=F('friendship__friend_owes'), then=F('balance')),
+                    default=Value(0)
+                )
+            ),
+            total_owns=Sum(
+                Case(
+                    When(friendship__friend_owns=F('friendship__friend_owes'), then=F('balance')),
+                    default=Value(0)
+                )
+            )
+        ).values(
+            user=F('friendship__friend_owes'),
+            total_owes=F('total_owes'),
+            total_owns=F('total_owns'),
+            net_balance=F('total_owns') - F('total_owes')
+        )
+
+        return balances
+
+    @staticmethod
     def edit_group_info(user, group, name = None, description = None):
         if user not in group.members:
             raise Exception('Group does\'nt exists')
@@ -46,22 +74,23 @@ class GroupService:
         
         
         metadata = {
-                'updated_by' : 'user_serializer(user).data',
+                'updated_by' : UserMiniProfileSerializer(user).data,
                 'group_name' : group.group_name,
                 }
         
         if name:
             group.group_name = name
-            metadata = {'field' : 'group name', 'new_name' : name}
+            metadata = {'field' : 'group_name', 'new_name' : name}
         
         else:
             group.description = description
-            metadata = {'field' : 'description', 'new_description' : description}
+            metadata = {'field' : 'description'}
 
         
         activity = ActivityService.create_activity(
             type = 'group_info_edited',
             users = group.members,
+            group=group,
             metadata=metadata
             )
         
@@ -78,7 +107,7 @@ class GroupService:
             raise Exception('Group does\'nt exists')
         
         metadata = {
-                'deleted_by' : 'user_serializer(user).data',
+                'deleted_by' : UserMiniProfileSerializer(user).data,
                 'group_name' : group.group_name,
                 },
         
@@ -100,8 +129,11 @@ class ActivityService:
         activity = Activity.objects.create(
             activity_type = type,
             group = group,
-            metadata = {'friends' : ['user_serializer(instance.friend_owes).data', 'user_serializer(instance.friend_owns).data']},
+            metadata = metadata,
             )
         
         activity.user.add(*users)
         return activity
+    
+
+    

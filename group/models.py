@@ -65,6 +65,7 @@ class Group(models.Model):
     total_spending = models.FloatField(default=0)
     is_simplified = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
+    admin = models.ForeignKey(User, null = False, blank=False, editable=False, related_name='group_admin')
     creator = models.ForeignKey(User, null = False, blank=False, editable=False, related_name='group_creator')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     
@@ -95,9 +96,7 @@ class Membership(models.Model):
           - on_delete=models.CASCADE: Deletes the membership if the associated added_by user is deleted.
           - related_name='added_membership': Allows reverse querying from the User model to access all memberships added by this user.
 
-        invitation_accepted (bool): Indicates whether the membership invitation has been accepted.
-          - default=False: Defaults to False until the invitation is accepted.
-
+        
         date_joined (DateTimeField): The date and time when the user joined the group.
           - null=True, blank=True: Allows the date_joined field to be nullable and blank initially.
 
@@ -110,17 +109,33 @@ class Membership(models.Model):
         pre_delete: Signal receiver `check_settle_up_before_leaving_group` checks if there are outstanding balances
             before removing a member from the group.
     """
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='members')
     group = models.ForeignKey(Group, editable=False, on_delete=models.CASCADE, related_name='membership')
     added_by = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='added_membership')
-    invitation_accepted = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(null = True, blank=True)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} is a member of {self.gorup}"
+    class Meta:
+      unique_together = ('group', 'user')
+
+class PendingMembers(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='pending_members')
+    group = models.ForeignKey(Group, editable=False, on_delete=models.CASCADE, related_name='pending_invitation')
+    invited_by = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='invited_by')
+    date_invited = models.DateTimeField(auto_now_add=True)
     
 
     def __str__(self):
-        return "self.user added by {self.added_by}: invitation_accepted: {self.invitation_accepted}."
+        return f"{self.user} invited by {self.added_by} to {self.group} group"
     
+
+    class Meta:
+      unique_together = ('group', 'user')
+
+
 class GroupBalance(models.Model):
     """
     Model representing the balance between two friends within a group context.
@@ -163,6 +178,7 @@ class Activity(models.Model):
         ('group_created', 'Group Created'),
         ('group_info_edited', 'Group Inforamtion Edited'),
         ('group_deleted', 'Group Deleted'),
+        ('member_invited', 'Member Invited to Join Group'),
         ('member_added', 'Member Added to Group'),
         ('member_left', 'Member Left Group'),
         ('expense_added', 'Expense Added to Group'),
