@@ -1,12 +1,13 @@
 from rest_framework import serializers
-from user.serializers import FriendshipSerializer, UserMiniProfileSerializer
+from user.serializers import UserMiniProfileSerializer
 from utils.utils import UserUtils
 from .models import *
 from rest_framework.serializers import ValidationError
 
 
 class GroupBalenceSerializer(serializers.ModelSerializer):
-    friendship = FriendshipSerializer(read_only = True)
+    friend_owes = UserMiniProfileSerializer(read_only = True)
+    friend_owns = UserMiniProfileSerializer(read_only = True)
     class Meta:
         model = GroupBalance
         fields = '__all__'
@@ -23,7 +24,7 @@ class PendingMembersSerializer(serializers.ModelSerializer):
 
 class MembershipSerializer(serializers.ModelSerializer):
     user = UserMiniProfileSerializer(read_only=True)
-    balance = serializers.ModelField(read_only = True)
+    balance = serializers.SerializerMethodField(read_only = True)
     class Meta:
         model = Membership
         fields = '__all__'

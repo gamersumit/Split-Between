@@ -5,14 +5,18 @@ from .models import *
 from rest_framework.serializers import ValidationError
 
 
-
+class UserProfileEditSerializer(serializers.ModelSerializer):
+    avatar = serializers.FileField(required=False)
+    class Meta:
+        model = User
+        fields = ['full_name', 'avatar']
 class UserMiniProfileSerializer(serializers.ModelSerializer) :
     class Meta:
         model = User
         fields = [
             'id',
             'username',
-            'full_name'
+            'full_name',
             'avatar',
         ]
         read_only_fields = ['id', 'username']
@@ -34,15 +38,6 @@ class UserProfileSerializer(UserMiniProfileSerializer):
     class Meta(UserMiniProfileSerializer.Meta):
         model = User
         fields = UserMiniProfileSerializer.Meta.fields + ['email']
-
-class FriendshipSerializer(serializers.ModelSerializer):
-    friend_owes = UserMiniProfileSerializer(read_only = True)
-    friend_owns = UserMiniProfileSerializer(read_only = True)
-    
-    class Meta:
-        model = ForgotPasswordOTP
-        fields = '__all__'
-        read_only_fields = ['id', 'friend_owes', 'friend_owns', 'created_at']
 
 
 class ForgotPasswordSerializer(serializers.ModelSerializer):

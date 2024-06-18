@@ -1,11 +1,60 @@
-from user.models import Friendship
+from collections import defaultdict
+from group.algorithms import UnionFind
+from group.serializers import GroupBalenceSerializer
 from user.serializers import UserMiniProfileSerializer
 from .models import Activity, GroupBalance
 from django.db.models import Q
 from django.db import transaction
-from datetime import datetime
 from django.db.models import Sum, F, Case, When, Value
 class GroupService:
+    @staticmethod 
+    def simplify_balances(group):
+        users = set()
+        edges = []
+        balances = group.balances
+        for balance in balances:
+            users.add(balance.friend_owes_id)
+            users.add(balance.friend_owns_id)
+            edges.append((balance.balance, balance.friend_owes_id, balance.friend_owns_id))
+        
+        users = list(users)
+        users_map = {user: idx for idx, user in enumerate(users)}
+        n = len(users)
+        
+        uf = UnionFind(n)
+        
+        # Step 3: Sort edges by balance (amount owed)
+        edges.sort()
+        
+        # Step 4: Apply Kruskal's algorithm to find the MST
+        mst = []
+        total_cost = 0
+        
+        for cost, u, v in edges:
+            if uf.union(users_map[u], users_map[v]):
+                mst.append((cost, u, v))
+                total_cost += cost
+        
+        # Step 5: Format the result into GroupBalance objects
+        simplified_balances = []
+        for cost, u, v in mst:
+            # Assuming balance is positive if u owes v, negative if v owes u
+            if cost > 0:
+                simplified_balances.append(GroupBalance(
+                    group=group,
+                    friend_owes_id=u,
+                    friend_owns_id=v,
+                    balance=cost
+                ))
+            else:
+                simplified_balances.append(GroupBalance(
+                    group=group,
+                    friend_owes_id=v,
+                    friend_owns_id=u,
+                    balance=-cost  # Make sure balance is positive
+                ))
+        
+        return simplified_balances
 
     @staticmethod
     def IsGroupSettledUp(group):
@@ -18,11 +67,11 @@ class GroupService:
         Returns:
         bool: True if all balances are settled (zero), False otherwise.
         """
-        return not group.balances.filter(balance__ne=0).exists()
+        return not GroupService.get_group_balances(group=group).filter(balance__ne=0).exists()
     
     @staticmethod
     def IsMemberSettledUp(group, user):
-         """
+        """
         Check if a specific member in the group has settled up with all other members.
 
         Args:
@@ -32,37 +81,37 @@ class GroupService:
         Returns:
         bool: True if the user has settled up with all other members, False otherwise.
         """
-         return not group.balances.filter(
-            Q(friendship__friend_owes=user) | Q(friendship__friend_owns=user),
+        return not GroupBalance.get_group_balances(group=group).filter(
+            Q(friend_owes=user) | Q(friend_owns=user),
             balance__ne=0
         ).exists()
 
     @staticmethod
-    def get_group_member_balances(group):
-        # Annotate each user's total amount owed and owned within the group
-        balances = GroupBalance.objects.filter(group=group).values(
-            'friendship__friend_owes'
-        ).annotate(
-            total_owes=Sum(
-                Case(
-                    When(friendship__friend_owes=F('friendship__friend_owes'), then=F('balance')),
-                    default=Value(0)
-                )
-            ),
-            total_owns=Sum(
-                Case(
-                    When(friendship__friend_owns=F('friendship__friend_owes'), then=F('balance')),
-                    default=Value(0)
-                )
-            )
-        ).values(
-            user=F('friendship__friend_owes'),
-            total_owes=F('total_owes'),
-            total_owns=F('total_owns'),
-            net_balance=F('total_owns') - F('total_owes')
-        )
+    def format_user_balence_in_the_group(group, user):
+        balances = GroupService.get_all_group_members_balences(group = group)
+        return balances.get(user, [])
 
-        return balances
+    @staticmethod
+    def format_group_balances_for_all_members(group):
+        balances = GroupService.get_group_balances(group = group)
+        all_balances = defaultdict(list)
+        
+        for balance in  balances:
+            friend_owes = balance.friend_owes
+            friend_owns = balance.friend_owns
+
+            balance = GroupBalenceSerializer(balance).data    
+
+            all_balances[friend_owes].append(balance)
+            all_balances[friend_owns].append(balance)
+
+        return all_balances
+        
+    @staticmethod
+    def get_group_balances(group):
+        if group.is_simplified:
+            return GroupService.simplify_balances(group=group)
+        return group.balances
 
     @staticmethod
     def edit_group_info(user, group, name = None, description = None):
@@ -99,7 +148,6 @@ class GroupService:
             activity.save()
 
         return activity, group
-
 
     @staticmethod
     def delete_group(user, group):

@@ -49,8 +49,8 @@ INSTALLED_APPS = [
 
     # project apps
     'user',
-    'group',
-    'expense',
+    # 'group',
+    # 'expense',
 ]
 
 MIDDLEWARE = [
@@ -64,14 +64,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:3000',
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://192.168.1.106:3000',
-    'http://192.168.1.87:3000',
-                        ]
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'config.urls'
 
@@ -171,7 +164,6 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS')
 EMAIL_PORT = os.getenv('EMAIL_PORT')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') 
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-
 
 # SWAGGER
 SWAGGER_SETTINGS = {

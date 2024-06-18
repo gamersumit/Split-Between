@@ -1,12 +1,9 @@
 from django.db.models.signals import pre_delete, pre_save, post_save, post_delete
 from django.dispatch import receiver
-
-from group.serializers import GroupMiniDetailsSerializer
 from user.serializers import UserMiniProfileSerializer
 from .models import GroupBalance, Membership, Group, PendingMembers
-from user.service import FriendshipService
 from .service import ActivityService, GroupService
-from django.db import transaction
+
 
 @receiver(pre_delete, sender=Group)
 def check_settle_up_before_group_deletion(sender, instance, **kwargs):
@@ -39,7 +36,7 @@ def check_settle_up_before_leaving_group(sender, instance, **kwargs):
     ValueError: If the member has outstanding balances in the group, prevents leaving the group.
     """
     if not GroupService.IsMemberSettledUp(group = instance.group, user=instance.user):
-        raise ValueError("Cannot leave group with outstanding balances.")
+        raise ValueError("Cannot leave group with outstanding balances: outstanding balances  will be calculated with SIMPLIFY feature OFF")
 
 
 @receiver(pre_save, sender=Membership)
@@ -58,14 +55,12 @@ def create_frienships_before_membership(sender, instance, **kwargs):
     """
     if not instance.pk:
         members = instance.group.members
-
-        with transaction.atomic():
-            friendships = FriendshipService.bulk_add_friends(user = instance.user, friends = members)
-            balance = []
-            for friendship in friendships:
-                balance.append(GroupBalance(group = instance.group, friendship = friendship))
-            if balance:
-                GroupBalance.objects.bulk_create(balance)
+        balance = []
+        for member in members:
+            balance.append(GroupBalance(group = instance.group, friend_owes=member.user, friend_owns=instance.user))
+        
+        if balance:
+            GroupBalance.objects.bulk_create(balance)
 
 @receiver(post_save, sender = Membership)
 def create_member_added_activity(send, instance, created, **kwargs):

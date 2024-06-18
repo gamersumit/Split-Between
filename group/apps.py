@@ -7,3 +7,4 @@ class ExpenseConfig(AppConfig):
 
     def ready(self):
         import group.signals
+        

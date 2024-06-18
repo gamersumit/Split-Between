@@ -5,7 +5,8 @@ from django.db import models
 import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db.models import CheckConstraint, Q
-from django.db import transaction
+
+
 
 # Create your models here.
 class User(AbstractUser): 
@@ -28,52 +29,13 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, null = False, blank = False)
     is_deleted = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
-    full_name = models.CharField(null=False, blank=False, max_length=50)
+    full_name = models.CharField(null=True, blank=True, max_length=50)
     unseen_total_activities = models.PositiveIntegerField(default=0, null=True, blank=True)
-    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
     def __str__(self):
         return self.username
-  
-class Friendship(models.Model):
-    """
-    Model representing a balance between two users.
-
-    Fields:
-    - friend_owes: ForeignKey to the User model, representing one user who owes the balance.
-    - friend_owns: ForeignKey to the User model, representing the other user who owns the balance.
-    - created_at: DateTime field for the timestamp when the balance record was created.
-    
-    Methods:
-    - __str__: Returns a string representation indicating the balance between friends.
-
-    Meta:
-    - unique_together: Ensures that each pair of users has a unique balance record.
-    - CheckConstraint: Ensures friend_owes and friend_owns are different users.
-
-    Signals:
-    - pre_save: Signal receiver `check_bidirectional_friendship` ensures bidirectional uniqueness
-      in the Friendship model before saving new instances.
-
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False) 
-    friend_owes = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, editable= False, related_name='balence_owes')
-    friend_owns = models.ForeignKey(User, editable = False, on_delete=models.CASCADE, editable=False, related_name='balence_owns')
-    created_at = models.DateTimeField(auto_now_add = True, editable=False)
-
-
-    def __str__(self):
-        return f"{self.friend_owes.username} <--- F R I E N D S H I P ---> {self.friend_owns.username}"
-    
-    
-    class Meta:
-        unique_together = ('friends_owes', 'friend_owns')
-        CheckConstraint(
-                name='different_users',
-                check=~Q(friend_owes=models.F('friend_owns')),  # friend_owes != friend_owns
-            ),
 
 class ForgotPasswordOTP(models.Model):
     """
@@ -87,7 +49,7 @@ class ForgotPasswordOTP(models.Model):
     - __str__: Returns a string representation indicating the user the OTP is for.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, editable=False, unique=True)
-    otp = models.PositiveIntegerField(null=True, blank=False)
+    otp = models.PositiveIntegerField(null=False, blank=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     def isExpired(self):

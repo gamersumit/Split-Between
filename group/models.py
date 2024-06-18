@@ -2,10 +2,7 @@ import datetime
 import uuid
 from django.utils import timezone
 from django.db import models
-
-from user.models import User, Friendship
-
-
+from user.models import User
 # Create your models here.
 class Group(models.Model): 
     """
@@ -18,6 +15,13 @@ class Group(models.Model):
         id (UUID): The unique identifier for the group.
         group_name (str): The name of the group.
         group_description (str): A brief description of the group.
+        is_deleted (bool): Indicates whether the group has been marked as deleted.
+        
+        admin (ForeignKey): Represents the user who is the admin of the group.
+        
+        creator (ForeignKey): Represents the user who created the group.
+
+        created_at (DateTimeField): Represents the date and time when the group was created.
         
         members (ManyToManyField): The users who are members of the group. 
             This field establishes a many-to-many relationship between the Group model 
@@ -27,7 +31,8 @@ class Group(models.Model):
             that manages the relationship, including additional fields such as 
             'added_by', date_joined, and 'invitation_accepted' to provide more information 
             about the relationship between users and groups.
-        
+
+    
         is_simplified (bool): Indicates whether the group's expenses are simplified 
             by consolidating debts among members. When enabled, the system calculates 
             and displays the net balances between each pair of members after canceling 
@@ -61,12 +66,12 @@ class Group(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     group_name = models.CharField(max_length = 50, null = False, blank=False)
     group_description = models.CharField(max_length=200)
-    members = models.ManyToManyField(User, related_name='groups', through = 'Membership', blank=True)
+    members = models.ManyToManyField(User, related_name='group_members', through = 'Membership', through_fields=('group', 'user'),  blank=True)
     total_spending = models.FloatField(default=0)
     is_simplified = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
-    admin = models.ForeignKey(User, null = False, blank=False, editable=False, related_name='group_admin')
-    creator = models.ForeignKey(User, null = False, blank=False, editable=False, related_name='group_creator')
+    admin = models.ForeignKey(User, null = False, blank=False, editable=False, on_delete= models.CASCADE, related_name='group_admin')
+    creator = models.ForeignKey(User, null = False, blank=False, editable=False, on_delete= models.CASCADE, related_name='group_creator')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     
     def __str__(self):
@@ -162,19 +167,19 @@ class GroupBalance(models.Model):
     - unique_together: Ensures that each combination of group and friendship has a unique GroupBalance record.
     """
     group = models.ForeignKey(Group, related_name='balances', null=False, blank=False, editable=False, on_delete=models.CASCADE)
-    friendship = models.ForeignKey(Friendship, related_name='balances', null=False, blank=False, editable=False, on_delete=models.CASCADE)
+    friend_owes = models.ForeignKey(User, editable=False, on_delete=models.CASCADE,  related_name='balence_owes')
+    friend_owns = models.ForeignKey(User, editable = False, on_delete=models.CASCADE,  related_name='balence_owns')
     balance = models.FloatField(default=0)
 
     def __str__(self):
-        return f"Group: {self.group.group_name}, Friendship: {self.friendship}, Balance: {self.balance}"
+        return f"Group: {self.group.group_name}, Friendship: {self.friend_owes, self.friend_owns}, Balance: {self.balance}"
 
     class Meta:
-        unique_together = ('group', 'friendship')
+        unique_together = ('group', 'friend_owes', 'friend_owns')
 
 
 class Activity(models.Model):
     ACTIVITY_CHOICES = (
-        ('friend_added', 'Friend added to Friend List')
         ('group_created', 'Group Created'),
         ('group_info_edited', 'Group Inforamtion Edited'),
         ('group_deleted', 'Group Deleted'),
@@ -193,7 +198,7 @@ class Activity(models.Model):
     id = models.UUIDField(primary_key=True, editable=False)
     activity_type = models.CharField(null = False, blank=False, max_length=40, editable=False, choices=ACTIVITY_CHOICES)
     group = models.CharField(null = True, blank = True, default = None, editable=False)
-    users = models.ManyToManyField(null = False, symmetrical=False, related_name='activites', editable=False)
+    users = models.ManyToManyField(User, symmetrical=False, related_name='activites', editable=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     metadata = models.JSONField(editable=False, null = True, blank=True, default=dict)
     

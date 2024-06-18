@@ -18,7 +18,7 @@
 # metadata = {
 #                'updated_by' : {id : uuid, user : str, avatar : url, etc},
 #                'group' : {id : uuid, group_name : str},
-#                'field' : str : choice : 'group_name', 
+#                'sub_type' : 'group_name', 
 #                'new_name' : str,
 #             }
 
@@ -26,11 +26,27 @@
 # metadata = {
 #                'updated_by' : {id : uuid, user : str, avatar : url, etc},
 #                'group' : {id : uuid, group_name : str},
-#                'field' : str : choice : 'description', 
+#                'sub_type' : 'description', 
+#                
+# 
+#             }
+# 5. GROUP SIMPLIFICATION FEATURE EDIT ACTIVITY (group_info_edited):
+# metadata = {
+#                'updated_by' : {id : uuid, user : str, avatar : url, etc},
+#                'group' : {id : uuid, group_name : str},
+#                'sub_type' : 'simplified', 
+#                'state' : True,
+# 
+#             }
+# 6. GROUP DESCRIPTION EDIT ACTIVITY (group_info_edited):
+# metadata = {
+#                'updated_by' : {id : uuid, user : str, avatar : url, etc},
+#                'group' : {id : uuid, group_name : str},
+#                'sub_type' : 'description', 
 #                'new_description' : str,
 # 
 #             }
-# 5. GROUP DELETION ACTIVITY (group_deleted):
+# 7. GROUP DELETION ACTIVITY (group_deleted):
 # metadata = {
 #                'deleted_by' : {id : uuid, user : str, avatar : url, etc},
 #                'group_' : {id : uuid, group_name : str},

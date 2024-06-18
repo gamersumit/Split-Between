@@ -49,7 +49,8 @@ class ResendEmailVerificationLink(generics.CreateAPIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'email': openapi.Schema(type=openapi.TYPE_STRING)
-            }
+            },
+            required=['email'],
         )
     ) 
     def post(self, request):
@@ -73,18 +74,11 @@ class UpdateUserProfileView(generics.GenericAPIView) :
     queryset = User.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
-
+    serializer_class = UserProfileEditSerializer
     @swagger_auto_schema(
     tags = ['User'],
     operation_summary= "EDIT PROFILE", operation_description = 'UPDATE FULL NAME OR PROFILE', 
     responses={200: openapi.Response('Profile Updated Succesfully', UserMiniProfileSerializer)},
-    request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'full_name': openapi.Schema(type=openapi.TYPE_STRING),
-                'avatar': openapi.Schema(type=openapi.TYPE_FILE)
-            }
-        )
     ) 
     def put(self, request):
         urls = []
@@ -192,7 +186,8 @@ class LogoutView(generics.RetrieveAPIView) :
                 return Response({'status': False, 'message': 'Missing Token'}, status = 400)
         
         except Exception as e :
-            return Response({'status': False, 'message': str(e)}, status = 400)     
+            return Response({'status': False, 'message': str(e)}, status = 400)
+         
 
 # ArtistSerializer --- to provide list of all artist
 class SearchUsersView(generics.ListAPIView) :
@@ -206,18 +201,23 @@ class SearchUsersView(generics.ListAPIView) :
     
 
     @swagger_auto_schema(
-    tags = ['User'],
-    operation_summary= "SEARCH USER", operation_description = 'Results in User\'s detailed list based on serach with username or select all with pagination', 
-    query_serializer=openapi.Parameter(
-        'username',  # name of the parameter
-        openapi.IN_QUERY,  # location of the parameter
-        description='Username for search',  # description of the parameter
-        type=openapi.TYPE_STRING,  # type of the parameter
-        required=True,  # make it required
-    ),
-    responses={200: openapi.Response('LIST OF USER\'S', [UserMiniProfileSerializer])})       
+        tags=['User'],
+        operation_summary="SEARCH USER",
+        operation_description='Results in User\'s detailed list based on search with username or select all with pagination',
+        manual_parameters=[
+            openapi.Parameter(
+                name='username',  # name of the parameter
+                in_=openapi.IN_QUERY,  # location of the parameter
+                description='Username for search',  # description of the parameter
+                type=openapi.TYPE_STRING,  # type of the parameter
+                required=True,  # make it required
+            ),
+        ],
+        responses={200: openapi.Response('LIST OF USERS', UserMiniProfileSerializer(many=True))}
+    )
     def get(self, request):
         return super().get(request)
+
 
 class CurrentUserDetailView(generics.GenericAPIView):
     serializer_class = UserProfileSerializer
@@ -237,6 +237,8 @@ class CurrentUserDetailView(generics.GenericAPIView):
         except Exception as e:
             return Response({'message' : str(e)}, status = 400)
 
+
+
 class SendPasswordResetOTPView(generics.UpdateAPIView):
     serializer_class = ForgotPasswordSerializer
     queryset = ForgotPasswordOTP.objects.all()
@@ -247,8 +249,9 @@ class SendPasswordResetOTPView(generics.UpdateAPIView):
     request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'email': openapi.Schema(type=openapi.TYPE_STRING, required=True),
-            }
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+            required=['email'],
         ),
     responses={200: openapi.Response('OTP sent to your mail succesfully')})       
     def put(self, request):
@@ -266,7 +269,7 @@ class SendPasswordResetOTPView(generics.UpdateAPIView):
                     serializer.otp = body
                     
                 else :
-                    data = {'otp' : body, 'user' : user.id}
+                    data = {'otp' : body, 'user_id' : user.id}
                     serializer = self.serializer_class(data = data)
                     serializer.is_valid(raise_exception=True)
                 mail.send()
@@ -279,7 +282,8 @@ class SendPasswordResetOTPView(generics.UpdateAPIView):
         except Exception as e:
             return Response({'message' : str(e)}, status = 400)
     
-class resetPasswordTokenGenerationView(APIView):
+
+class ResetPasswordTokenGenerationView(APIView):
     http_method_names = ['post']
 
     @swagger_auto_schema(tags = ['Auth'], 
@@ -287,9 +291,10 @@ class resetPasswordTokenGenerationView(APIView):
     request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'email': openapi.Schema(type=openapi.TYPE_STRING, required=True),
-                'otp': openapi.Schema(type=openapi.TYPE_INTEGER, required=True)
-            }
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'otp': openapi.Schema(type=openapi.TYPE_INTEGER)
+            },
+            required= ['email', 'otp']
         ),
     responses={
             200: openapi.Response(
@@ -328,7 +333,7 @@ class resetPasswordTokenGenerationView(APIView):
         except Exception as e:
             return Response({'message': str(e)}, status = 400)
         
-class resetPasswordView(generics.GenericAPIView):
+class ResetPasswordView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     @swagger_auto_schema(tags = ['Auth'], 
@@ -339,8 +344,9 @@ class resetPasswordView(generics.GenericAPIView):
     request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'password': openapi.Schema(type=openapi.TYPE_STRING, required=True),
-            }
+                'password': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+            required=['password'],
         ),        
         )
     def patch(self, request):

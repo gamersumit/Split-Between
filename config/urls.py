@@ -41,7 +41,9 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
+    path('user/', include('user.urls')),    
+
+
     # rest framework inbuilt
     path('rest/', include('rest_framework.urls', namespace='rest_framework')),
    
