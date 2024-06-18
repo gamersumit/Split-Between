@@ -196,7 +196,7 @@ class SearchUsersView(generics.ListAPIView) :
     
     def get_queryset(self):
         username = self.request.query_params.get('username', None)
-        queryset = queryset.filter(username__icontains=username)
+        queryset = User.objects.filter(username__icontains=username)
         return queryset
     
 
@@ -244,6 +244,7 @@ class SendPasswordResetOTPView(generics.UpdateAPIView):
     queryset = ForgotPasswordOTP.objects.all()
     http_method_names = ['put']
     
+
     @swagger_auto_schema(tags = ['Auth'], 
     operation_summary= "OTP FOR PASSWORD RESET", operation_description = 'Sends OTP to the provided email in request body', 
     request_body=openapi.Schema(
@@ -269,8 +270,8 @@ class SendPasswordResetOTPView(generics.UpdateAPIView):
                     serializer.otp = body
                     
                 else :
-                    data = {'otp' : body, 'user_id' : user.id}
-                    serializer = self.serializer_class(data = data)
+                    data = {'otp' : body, 'user' : user.id}
+                    serializer = self.serializer_class(data = data, context = {'user' : user})
                     serializer.is_valid(raise_exception=True)
                 mail.send()
                 serializer.save()

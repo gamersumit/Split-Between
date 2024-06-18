@@ -48,5 +48,5 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'updated_at']
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        validated_data['user'] = self.context['user']
         return super().create(validated_data)
