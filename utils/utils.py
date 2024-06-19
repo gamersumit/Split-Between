@@ -93,7 +93,7 @@ class CommonUtils:
     @staticmethod
     def UploadMediaToCloud(media):
         try : 
-            path = f'public/split/avatar/'
+            path = f'public/split/avatar'
             upload = uploader.upload_large(media, folder = path, use_filename = True)   
             return upload['secure_url']
         

@@ -88,7 +88,7 @@ class UpdateUserProfileView(generics.GenericAPIView) :
             data = {}
 
             if request.data.get('avatar', None):
-                urls.append(CommonUtils.UploadMediaToCloud(request))
+                urls.append(CommonUtils.UploadMediaToCloud(request.data['avatar']))
                 data['avatar'] = urls[0]
                 current_avatar =  user.avatar 
 
