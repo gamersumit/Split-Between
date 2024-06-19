@@ -19,7 +19,7 @@ class PendingMembersSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'invited_by', 'date_invited']
 
         def create(self, validated_data):
-            validated_data['invited_by'] = self.context['request'].user
+            validated_data['invited_by'] = self.context['user']
             return super().create(validated_data)
 
 class MembershipSerializer(serializers.ModelSerializer):
@@ -43,15 +43,18 @@ class GroupMiniDetailsSerializer(serializers.ModelSerializer) :
         ]
         read_only_fields = ['id']
 
-class GroupDeatilSerializer(serializers.Serializer):
+
+class GroupDeatilSerializer(serializers.ModelSerializer):
     members = MembershipSerializer(read_only = True, many = True)
+    group_picture = serializers.FileField(required = False, default = None, write_only = True)
     class Meta:
         model = Group
         fields = '__all__'
-        read_only_fields = ['id', 'total_spending', 'admin','creator', 'created_at', 'is_deleted', 'is_simplified', 'members']
+        read_only_fields = ['id', 'total_spending','group_icon', 'admin', 'creator', 'created_at', 'is_deleted', 'is_simplified', 'members']
 
 
     def create(self, validated_data):
-        validated_data['admin'] = self.context['request'].user
-        validated_data['creator'] = self.context['request'].user
+        validated_data['admin'] = self.context['user']
+        validated_data['creator'] = self.context['user']
+        validated_data['group_icon'] = self.context.get('group_icon', None)
         return super().create(validated_data)

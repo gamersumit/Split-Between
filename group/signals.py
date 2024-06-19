@@ -53,8 +53,8 @@ def create_frienships_before_membership(sender, instance, **kwargs):
     Checks if the instance is new (not yet saved to the database) and creates friendships
     between the new member and existing members of the group.
     """
-    if not instance.pk:
-        members = instance.group.members
+    members = instance.group.members
+    if not instance.pk and members:
         balance = []
         for member in members:
             balance.append(GroupBalance(group = instance.group, friend_owes=member.user, friend_owns=instance.user))
@@ -64,7 +64,7 @@ def create_frienships_before_membership(sender, instance, **kwargs):
 
 @receiver(post_save, sender = Membership)
 def create_member_added_activity(send, instance, created, **kwargs):
-    if created:
+    if created and instance.group.members.count() > 1:
         activity = ActivityService.create_activity(
             type = 'member_added',
             group = instance.group,

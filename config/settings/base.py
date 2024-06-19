@@ -53,7 +53,7 @@ INSTALLED_APPS = [
 
     # project apps
     'user',
-    # 'group',
+    'group',
     # 'expense',
 ]
 

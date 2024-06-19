@@ -65,7 +65,8 @@ class Group(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     group_name = models.CharField(max_length = 50, null = False, blank=False)
-    group_description = models.CharField(max_length=200)
+    group_icon = models.URLField(null = True, blank = True)
+    group_description = models.CharField(max_length=200, null =True, blank=True)
     members = models.ManyToManyField(User, related_name='group_members', through = 'Membership', through_fields=('group', 'user'),  blank=True)
     total_spending = models.FloatField(default=0)
     is_simplified = models.BooleanField(default=False)
@@ -197,7 +198,7 @@ class Activity(models.Model):
     )
     id = models.UUIDField(primary_key=True, editable=False)
     activity_type = models.CharField(null = False, blank=False, max_length=40, editable=False, choices=ACTIVITY_CHOICES)
-    group = models.CharField(null = True, blank = True, default = None, editable=False)
+    group = models.ForeignKey(Group, null = True, default = None, on_delete=models.SET_NULL,editable=False)
     users = models.ManyToManyField(User, symmetrical=False, related_name='activites', editable=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     metadata = models.JSONField(editable=False, null = True, blank=True, default=dict)
