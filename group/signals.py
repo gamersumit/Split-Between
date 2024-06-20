@@ -80,6 +80,7 @@ def create_member_added_activity(send, instance, created, **kwargs):
 @receiver(post_save, sender = Group)
 def group_created_activity(sender, instance, created, **kwargs):
     if created:
+        Membership.objects.create(user = instance.creator, group = instance, added_by = instance.creator)
         activity = ActivityService.create_activity(
             type = 'group_created',
             users = instance.members,

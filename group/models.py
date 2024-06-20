@@ -3,6 +3,7 @@ import uuid
 from django.utils import timezone
 from django.db import models
 from user.models import User
+from django.db import transaction
 # Create your models here.
 class Group(models.Model): 
     """
@@ -67,7 +68,8 @@ class Group(models.Model):
     group_name = models.CharField(max_length = 50, null = False, blank=False)
     group_icon = models.URLField(null = True, blank = True)
     group_description = models.CharField(max_length=200, null =True, blank=True)
-    members = models.ManyToManyField(User, related_name='group_members', through = 'Membership', through_fields=('group', 'user'),  blank=True)
+    members = models.ManyToManyField(User, related_name='groups_membership', through = 'Membership', through_fields=('group', 'user'),  blank=True)
+    pending_members = models.ManyToManyField(User, related_name='groups_pending', through = 'PendingMembers', through_fields=('group', 'user'),  blank=True)
     total_spending = models.FloatField(default=0)
     is_simplified = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
@@ -116,8 +118,8 @@ class Membership(models.Model):
             before removing a member from the group.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='members')
-    group = models.ForeignKey(Group, editable=False, on_delete=models.CASCADE, related_name='membership')
+    user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='Membership')
+    group = models.ForeignKey(Group, editable=False, on_delete=models.CASCADE)
     added_by = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='added_membership')
     date_joined = models.DateTimeField(auto_now_add=True)
 
@@ -128,8 +130,8 @@ class Membership(models.Model):
 
 class PendingMembers(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='pending_members')
-    group = models.ForeignKey(Group, editable=False, on_delete=models.CASCADE, related_name='pending_invitation')
+    user = models.ForeignKey(User,  on_delete=models.CASCADE, related_name='invitaions')
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
     invited_by = models.ForeignKey(User, editable=False, on_delete=models.CASCADE, related_name='invited_by')
     date_invited = models.DateTimeField(auto_now_add=True)
     
@@ -140,7 +142,6 @@ class PendingMembers(models.Model):
 
     class Meta:
       unique_together = ('group', 'user')
-
 
 class GroupBalance(models.Model):
     """
@@ -185,6 +186,7 @@ class Activity(models.Model):
         ('group_info_edited', 'Group Inforamtion Edited'),
         ('group_deleted', 'Group Deleted'),
         ('member_invited', 'Member Invited to Join Group'),
+        ('invitation_dropped', 'Reject/Cancel Invitation to Join Group'),
         ('member_added', 'Member Added to Group'),
         ('member_left', 'Member Left Group'),
         ('expense_added', 'Expense Added to Group'),

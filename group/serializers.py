@@ -18,21 +18,26 @@ class PendingMembersSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['id', 'invited_by', 'date_invited']
 
-        def create(self, validated_data):
-            validated_data['invited_by'] = self.context['user']
-            return super().create(validated_data)
+    def create(self, validated_data):
+        validated_data['invited_by'] = self.context['user']
+        members = validated_data['group'].members
+        if self.context['user'] not in members:
+            raise ValidationError("Group not found")
+        
+        if self.validated_data['user'] in members:
+            raise ValidationError("Already a member of the group")
+        return super().create(validated_data)
 
 class MembershipSerializer(serializers.ModelSerializer):
     user = UserMiniProfileSerializer(read_only=True)
-    balance = serializers.SerializerMethodField(read_only = True)
     class Meta:
         model = Membership
         fields = '__all__'
-
+        
     def get_balance(self):
         pass
 
-class GroupMiniDetailsSerializer(serializers.ModelSerializer) :
+class GroupMiniDetailSerializer(serializers.ModelSerializer) :
     class Meta:
         model = Group
         fields = [
@@ -43,15 +48,23 @@ class GroupMiniDetailsSerializer(serializers.ModelSerializer) :
         ]
         read_only_fields = ['id']
 
-
 class GroupDeatilSerializer(serializers.ModelSerializer):
-    members = MembershipSerializer(read_only = True, many = True)
+    balances = serializers.SerializerMethodField(read_only = True)
     group_picture = serializers.FileField(required = False, default = None, write_only = True)
+    members = MembershipSerializer(read_only = True, many = True)
+    pending_members = PendingMembersSerializer(read_only = True, many = True)
+    # total_expense
+    # monthly_expense
+    # expenses 
     class Meta:
         model = Group
         fields = '__all__'
         read_only_fields = ['id', 'total_spending','group_icon', 'admin', 'creator', 'created_at', 'is_deleted', 'is_simplified', 'members']
 
+
+    def get_balances(self):
+        from group.service import GroupService
+        return GroupService.format_group_balances_for_all_members(group=self)
 
     def create(self, validated_data):
         validated_data['admin'] = self.context['user']
