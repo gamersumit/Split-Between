@@ -145,3 +145,17 @@ class JoinedGroupDetailView(generics.RetrieveAPIView):
     ) 
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+class UserActivityListView(generics.ListAPIView):
+    serializer_class = ActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+       return self.request.user.activites.all()
+    
+    @swagger_auto_schema(tags = ['ACTIVITY'], 
+    operation_summary= "LIST OF ALL THE ACTIVITY", 
+    operation_description = 'PROVIDES A LIST OF ALL THE GROUP ACTIVITIES CONCERNING CURRENT USER WHERE THE CURRENT USER IS MEMBER OF THE GROUP.', 
+    ) 
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
