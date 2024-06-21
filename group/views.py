@@ -164,9 +164,9 @@ class UserActivityListView(generics.ListAPIView):
 class UpdateGroupDetailsView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
+    serializer_class = GroupEditSerializer
     lookup_field = 'id'
     http_method_names = ['patch']
-
     def get_queryset(self):
         return self.request.user.groups_membership
 
@@ -174,12 +174,7 @@ class UpdateGroupDetailsView(generics.UpdateAPIView):
     tags=['Group'],
     operation_summary="TURN ON/OFF SIMPLIFY DEBTS",
     operation_description='DISABLE OR ENABLE SIMPLIFICATION OF BALANCES IN THE GROUP.',
-    manual_parameters=[
-            openapi.Parameter('name', openapi.IN_FORM, description="Name of the group", type=openapi.TYPE_STRING, required=False),
-            openapi.Parameter('description', openapi.IN_FORM, description="Description of the group", type=openapi.TYPE_STRING, required=False),
-            openapi.Parameter('icon', openapi.IN_FORM, description="Icon file for the group", type=openapi.TYPE_FILE, required=False)
-        ],
-    # responses={200: openapi.Response(description='Success', schema=balance_response_schema)},
+    responses={200: openapi.Response(description='Success', schema=GroupDeatilSerializer)}
     )
     def patch(self, request, *args, **kwargs):
         try:

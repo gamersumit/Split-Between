@@ -48,6 +48,15 @@ class GroupMiniDetailSerializer(serializers.ModelSerializer) :
         ]
         read_only_fields = ['id']
 
+
+class GroupEditSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length = 50, required = False)
+    description = serializers.CharField(required = False)
+    icon = serializers.FileField(required = False)
+        
+    class Meta:
+        fields = '__all__'
+
 class GroupDeatilSerializer(serializers.ModelSerializer):
     balances = serializers.SerializerMethodField(read_only = True)
     group_picture = serializers.FileField(required = False, default = None, write_only = True)
