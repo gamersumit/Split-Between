@@ -81,7 +81,7 @@ class GroupService:
         Returns:
         bool: True if the user has settled up with all other members, False otherwise.
         """
-        return not GroupBalance.get_group_balances(group=group).filter(
+        return not GroupService.get_group_balances(group=group).filter(
             Q(friend_owes=user) | Q(friend_owns=user),
             balance__ne=0
         ).exists()
@@ -112,42 +112,6 @@ class GroupService:
         if group.is_simplified:
             return GroupService.simplify_balances(group=group)
         return group.balances
-
-    @staticmethod
-    def edit_group_info(user, group, name = None, description = None):
-        if user not in group.members:
-            raise Exception('Group does\'nt exists')
-
-        if (not name and not description ) or (name and description):
-            raise Exception('Only Name or Description is editable at a time')
-        
-        
-        metadata = {
-                'updated_by' : UserMiniProfileSerializer(user).data,
-                'group_name' : group.group_name,
-                }
-        
-        if name:
-            group.group_name = name
-            metadata = {'field' : 'group_name', 'new_name' : name}
-        
-        else:
-            group.description = description
-            metadata = {'field' : 'description'}
-
-        
-        activity = ActivityService.create_activity(
-            type = 'group_info_edited',
-            users = group.members,
-            group=group,
-            metadata=metadata
-            )
-        
-        with transaction.atomic():
-            group.save() 
-            activity.save()
-
-        return activity, group
 
     @staticmethod
     def delete_group(user, group):

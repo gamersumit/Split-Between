@@ -48,6 +48,7 @@ class Expense(models.Model):
     paid_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_owners')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_creators', editable=False)
     settled_with = models.OneToOneField(User, on_delete=models.CASCADE, related_name='expense_settled_with', null=True, blank=True)
+    automatic = models.BooleanField(default=False)
     total_amount = models.FloatField(null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

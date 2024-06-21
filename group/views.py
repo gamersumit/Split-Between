@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
@@ -6,14 +7,14 @@ from django.utils import timezone
 
 from group.service import ActivityService
 from .serializers import *
-from rest_framework import permissions
+from rest_framework import permissions, status
 from django.contrib.auth import authenticate
 from user.models import User
 from utils.utils import CommonUtils, UserUtils
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from rest_framework.decorators import api_view, permission_classes
 # Create your views here.
 class CreateGroupView(generics.CreateAPIView):
     serializer_class = GroupDeatilSerializer
@@ -153,9 +154,84 @@ class UserActivityListView(generics.ListAPIView):
     def get_queryset(self):
        return self.request.user.activites.all()
     
-    @swagger_auto_schema(tags = ['ACTIVITY'], 
+    @swagger_auto_schema(tags = ['Activity'], 
     operation_summary= "LIST OF ALL THE ACTIVITY", 
     operation_description = 'PROVIDES A LIST OF ALL THE GROUP ACTIVITIES CONCERNING CURRENT USER WHERE THE CURRENT USER IS MEMBER OF THE GROUP.', 
     ) 
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+class UpdateGroupDetailsView(generics.UpdateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    lookup_field = 'id'
+    http_method_names = ['patch']
+
+    def get_queryset(self):
+        return self.request.user.groups_membership
+
+    @swagger_auto_schema(
+    tags=['Group'],
+    operation_summary="TURN ON/OFF SIMPLIFY DEBTS",
+    operation_description='DISABLE OR ENABLE SIMPLIFICATION OF BALANCES IN THE GROUP.',
+    manual_parameters=[
+            openapi.Parameter('name', openapi.IN_FORM, description="Name of the group", type=openapi.TYPE_STRING, required=False),
+            openapi.Parameter('description', openapi.IN_FORM, description="Description of the group", type=openapi.TYPE_STRING, required=False),
+            openapi.Parameter('icon', openapi.IN_FORM, description="Icon file for the group", type=openapi.TYPE_FILE, required=False)
+        ],
+    # responses={200: openapi.Response(description='Success', schema=balance_response_schema)},
+    )
+    def patch(self, request, *args, **kwargs):
+        try:
+            group = self.get_object()
+            field = kwargs.get('field', None)
+            
+            if field not in ['name', 'description', 'icon', 'simplified']:
+                return Response({'error': 'PAGE NOT FOUND'}, status=400)
+            
+
+            type = None
+            icon = None
+            metadata = {'updated_by' : UserMiniProfileSerializer(request.user), 'group_name' : group.group_name}
+            response = {'message' : 'request successful'}
+            
+            
+            if field  == 'simplified':
+                type = 'group_simplified'
+                group.is_simplified =  not group.is_simplified   
+                from .service import GroupService
+                balances = GroupService.format_group_balances_for_all_members(group)
+                response = {'state': group.is_simplified, 'balances' : balances}
+            
+            if field == 'name' :
+                type = 'changed_group_name'
+                group.group_name = request.data['name']
+                metadata = {'new_name' : group.group_name}
+                
+            if field == 'description' :
+                type = 'changed_group_description'
+                group.description = request.data['description']
+            
+            if field == 'icon' :
+                icon = CommonUtils.UploadMediaToCloud(icon)
+                type = 'changed_group_icon'
+                group.group_icon = icon
+                response = {'group_icon' : icon}
+                
+                
+            with transaction.atomic():
+                group.save()
+                ActivityService.create_activity(type=type, group = group, users=group.members, metadata=metadata)
+            
+            
+            return Response({'message': 'Debts simplified successfully', 'state' : group.is_simplified ,'balances' : balances}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            if icon:
+                CommonUtils.delete_media_from_cloudinary([icon])
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Leave group
+# Kick a member
+# delete group

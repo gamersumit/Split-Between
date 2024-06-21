@@ -59,7 +59,7 @@ class GroupDeatilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = '__all__'
-        read_only_fields = ['id', 'total_spending','group_icon', 'admin', 'creator', 'created_at', 'is_deleted', 'is_simplified', 'members']
+        read_only_fields = ['id', 'total_spending','group_icon', 'admin', 'creator', 'created_at', 'is_deleted', 'members']
 
 
     def get_balances(self):
@@ -71,3 +71,11 @@ class GroupDeatilSerializer(serializers.ModelSerializer):
         validated_data['creator'] = self.context['user']
         validated_data['group_icon'] = self.context.get('group_icon', None)
         return super().create(validated_data)
+
+
+class ActivitySerializer(serializers.ModelSerializer) :
+    group = GroupMiniDetailSerializer(read_only=True)
+    class Meta:
+        model = Activity
+        exclude = ['users']
+        

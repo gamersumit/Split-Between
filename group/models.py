@@ -193,17 +193,15 @@ class Activity(models.Model):
         ('expense_edited', 'Expense Edited in Group'),
         ('expense_deleted', 'Expense Deleted from Group'),
         ('group_invitation_received', 'Group Invitation Received'),
-        ('friendship_invitation_received', 'Friendship Invitation Received'),
-        ('friendship_invitation_accepted', 'Friendship Invitation Received'),
         ('settled_up_with_user', 'Settled Up with User'),
         # Add more choices as needed
     )
     id = models.UUIDField(primary_key=True, editable=False)
-    activity_type = models.CharField(null = False, blank=False, max_length=40, editable=False, choices=ACTIVITY_CHOICES)
-    group = models.ForeignKey(Group, null = True, default = None, on_delete=models.SET_NULL,editable=False)
-    users = models.ManyToManyField(User, symmetrical=False, related_name='activites', editable=False)
+    activity_type = models.CharField(null = False, blank=False, max_length=40, choices=ACTIVITY_CHOICES)
+    group = models.ForeignKey(Group, null = True, default = None, on_delete=models.SET_NULL)
+    users = models.ManyToManyField(User, symmetrical=False, related_name='activites')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    metadata = models.JSONField(editable=False, null = True, blank=True, default=dict)
+    metadata = models.JSONField(null = True, blank=True, default=dict)
     
     def __str__(self):
         return f"{self.users} - {self.activity_type} - {self.created_at}"
