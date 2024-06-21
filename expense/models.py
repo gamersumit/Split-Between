@@ -47,6 +47,7 @@ class Expense(models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='expenses', editable=False)
     paid_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_owners')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_creators', editable=False)
+    contributors = models.ManyToManyField(User, related_name='contributed_expenses', through='ExpenseContribution')
     settled_with = models.OneToOneField(User, on_delete=models.CASCADE, related_name='expense_settled_with', null=True, blank=True)
     automatic = models.BooleanField(default=False)
     total_amount = models.FloatField(null=False, blank=False)
@@ -67,7 +68,7 @@ class ExpenseContribution(models.Model):
         share_amount (FloatField): The amount contributed by the user towards the expense.
     """
     expense = models.ForeignKey(Expense, on_delete=models.CASCADE, related_name='contributions')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contributors')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contributions')
     share_amount = models.FloatField(default = 0)
 
 
