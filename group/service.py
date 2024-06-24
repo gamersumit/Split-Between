@@ -127,6 +127,7 @@ class GroupService:
         activity = ActivityService.create_activity(
             type = 'group_deleted',
             users = group.members,
+            triggored_by=user,
             metadata=metadata
             )
         
@@ -138,7 +139,7 @@ class GroupService:
 
 class ActivityService:
     @staticmethod
-    def create_activity(type, users, triggored_by, group = None, metadata = {}):
+    def create_activity(type, users, triggored_by = None, group = None, metadata = {}):
         activity = Activity.objects.create(
             activity_type = type,
             group = group,

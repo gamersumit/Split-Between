@@ -74,7 +74,7 @@ def create_frienships_before_membership(sender, instance, **kwargs):
 def create_member_added_activity(send, instance, created, **kwargs):
     if created and instance.group.members.count() > 1:
         activity = ActivityService.create_activity(
-            type = 'member_added',
+            type = 'member_joined',
             group = instance.group,
             users = instance.group.members,
             metadata = {
@@ -92,6 +92,7 @@ def group_created_activity(sender, instance, created, **kwargs):
         activity = ActivityService.create_activity(
             type = 'group_created',
             users = instance.members,
+            triggored_by=instance.user,
             group = instance,
             metadata = {
                 'creator' : UserMiniProfileSerializer(instance.creator).data,
@@ -107,6 +108,7 @@ def group_invitation_sent_activity(send, instance, created, **kwargs):
             type = 'member_invited',
             group = instance.group,
             users = instance.group.members,
+            user = instance.invited_by,
             metadata = {
                 'invited_by' : UserMiniProfileSerializer(instance.invited_by).data,
                 'invited_user': UserMiniProfileSerializer(instance.user).data,
