@@ -198,9 +198,10 @@ class Activity(models.Model):
     )
     id = models.UUIDField(primary_key=True, editable=False)
     activity_type = models.CharField(null = False, blank=False, max_length=40, choices=ACTIVITY_CHOICES)
-    group = models.ForeignKey(Group, null = True, default = None, on_delete=models.SET_NULL)
+    group = models.ForeignKey(Group, null = True, default = None, on_delete=models.SET_NULL, related_name='activites')
     users = models.ManyToManyField(User, symmetrical=False, related_name='activites')
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    triggered_by = models.ForeignKey(User, null = True, default = None, on_delete=models.SET_NULL, related_name='activities_triggored')
+    triggered_at = models.DateTimeField(auto_now_add=True, editable=False)
     metadata = models.JSONField(null = True, blank=True, default=dict)
     
     def __str__(self):

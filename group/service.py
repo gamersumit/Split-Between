@@ -81,10 +81,11 @@ class GroupService:
         Returns:
         bool: True if the user has settled up with all other members, False otherwise.
         """
-        return not GroupService.get_group_balances(group=group).filter(
+        all_balances = GroupService.get_group_balances(group=group)
+        member_balances = all_balances.filter(
             Q(friend_owes=user) | Q(friend_owns=user),
-            balance__ne=0
-        ).exists()
+            balance__ne=0)
+        return member_balances.exists(), all_balances, member_balances
 
     @staticmethod
     def format_user_balence_in_the_group(group, user):
@@ -137,10 +138,11 @@ class GroupService:
 
 class ActivityService:
     @staticmethod
-    def create_activity(type, users, group = None, metadata = {}):
+    def create_activity(type, users, triggored_by, group = None, metadata = {}):
         activity = Activity.objects.create(
             activity_type = type,
             group = group,
+            triggored_by = triggored_by,
             metadata = metadata,
             )
         

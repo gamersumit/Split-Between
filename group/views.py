@@ -147,21 +147,52 @@ class JoinedGroupDetailView(generics.RetrieveAPIView):
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-class UserActivityListView(generics.ListAPIView):
-    serializer_class = ActivitySerializer
+class RemoveMemberFromGroupView(generics.DestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-       return self.request.user.activites.all()
+    queryset = Membership.objects.all()
     
-    @swagger_auto_schema(tags = ['Activity'], 
-    operation_summary= "LIST OF ALL THE ACTIVITY", 
-    operation_description = 'PROVIDES A LIST OF ALL THE GROUP ACTIVITIES CONCERNING CURRENT USER WHERE THE CURRENT USER IS MEMBER OF THE GROUP.', 
+    @swagger_auto_schema(tags = ['Group'], 
+    operation_summary= "REMOVE OR LEAVE GROUP", 
+    operation_description = 'REMOVE ANY MEMBER FROM GROUP OR LEAVE GROUP YOURSELF.', 
     ) 
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+    def delete(self, request, *args, **kwargs):
+        try:
+            member = self.get_object()
+            type = None
+            metadata = {'who' : UserMiniProfileSerializer(member.user), 'group_name' : member.group.group_name}
+            
+            if request.user == member.user : 
+                type = 'left_group'
 
+            elif request.user in member.group.members :
+                type = 'removed_from_group'
+                metadata = {'by' : UserMiniProfileSerializer(request.user)}
+
+            else:
+                return Response({'error' : 'member not found'}, status=404)
+
+            with transaction.atomic():
+                ActivityService.create_activity(type = type, group=member.group, users = member.group.members, metadata=metadata)
+                member.delete()
+                return Response({'message' : 'Request Succesful'}, status=204)
+        
+        except Exception as e:
+            return Response({'error' : str(e)}, status=500)
+
+class DeleteGroupView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def get_queryset(self):
+        return self.request.user.groups_membership.all()
+    
+    @swagger_auto_schema(tags = ['Group'], 
+    operation_summary= "DELETE A GROUP", 
+    operation_description = 'DELETE A SETTLED GROUP(GROUP IN WHICH OUTSATNDING BALANCES ARE ZERO) WHERE CURRENT USER IS MEMBER.', 
+    )
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
+    
 class UpdateGroupDetailsView(generics.UpdateAPIView):
+
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     serializer_class = GroupEditSerializer
@@ -227,6 +258,18 @@ class UpdateGroupDetailsView(generics.UpdateAPIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# Leave group
-# Kick a member
-# delete group
+
+class UserActivityListView(generics.ListAPIView):
+    serializer_class = ActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+       return self.request.user.activites.all()
+    
+    @swagger_auto_schema(tags = ['Activity'], 
+    operation_summary= "LIST OF ALL THE ACTIVITY", 
+    operation_description = 'PROVIDES A LIST OF ALL THE GROUP ACTIVITIES CONCERNING CURRENT USER WHERE THE CURRENT USER IS MEMBER OF THE GROUP.', 
+    ) 
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+

@@ -10,6 +10,7 @@ class UserProfileEditSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['full_name', 'avatar']
+
 class UserMiniProfileSerializer(serializers.ModelSerializer) :
     class Meta:
         model = User

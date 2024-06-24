@@ -1,6 +1,7 @@
 from django.db.models.signals import pre_delete, pre_save, post_save, post_delete
 from django.dispatch import receiver
 from user.serializers import UserMiniProfileSerializer
+from utils.utils import CommonUtils
 from .models import GroupBalance, Membership, Group, PendingMembers
 from .service import ActivityService, GroupService
 
@@ -21,6 +22,8 @@ def check_settle_up_before_group_deletion(sender, instance, **kwargs):
     if not GroupService.IsGroupSettledUp(group = instance):
         raise ValueError("Cannot delete group with outstanding balances.")
 
+    if instance.group_icon:
+         CommonUtils.delete_media_from_cloudinary([instance.group_icon])
 
 @receiver(pre_delete, sender=Membership)
 def check_settle_up_before_leaving_group(sender, instance, **kwargs):
@@ -35,10 +38,15 @@ def check_settle_up_before_leaving_group(sender, instance, **kwargs):
     Raises:
     ValueError: If the member has outstanding balances in the group, prevents leaving the group.
     """
-    if not GroupService.IsMemberSettledUp(group = instance.group, user=instance.user):
+    is_settled, all_balances, member_balances = GroupService.IsMemberSettledUp(group = instance.group, user=instance.user)
+    
+    if not is_settled:
         raise ValueError("Cannot leave group with outstanding balances: outstanding balances  will be calculated with SIMPLIFY feature OFF")
 
-
+    all_balances.save()
+    member_balances.delete()
+    instance.group.pending_members.filter(invited_by = instance.user).delete()
+    
 @receiver(pre_save, sender=Membership)
 def create_frienships_before_membership(sender, instance, **kwargs):
     """

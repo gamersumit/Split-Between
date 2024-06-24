@@ -43,18 +43,16 @@ class Expense(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    expense_type = models.CharField(max_length=40, choices=EXPENSE_CHOICES, editable=False)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='expenses', editable=False)
-    paid_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_owners')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_creators', editable=False)
-    contributors = models.ManyToManyField(User, related_name='contributed_expenses', through='ExpenseContribution')
-    settled_with = models.OneToOneField(User, on_delete=models.CASCADE, related_name='expense_settled_with', null=True, blank=True)
-    automatic = models.BooleanField(default=False)
+    expense_type = models.CharField(max_length=40, choices=EXPENSE_CHOICES)
+    description = models.CharField(max_length = 250, default = 'Expense')
     total_amount = models.FloatField(null=False, blank=False)
+    paid_by = models.ForeignKey(User, on_delete=models.CASCADE, null = False, related_name='expense_owners')
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='expenses')
+    contributors = models.ManyToManyField(User, related_name='contributed_expenses', through='ExpenseContribution')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expense_creators')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-
+    
 class ExpenseContribution(models.Model):
     """
     Represents a contribution made towards an expense.
@@ -67,9 +65,16 @@ class ExpenseContribution(models.Model):
         user (ForeignKey): The user who made the contribution.
         share_amount (FloatField): The amount contributed by the user towards the expense.
     """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     expense = models.ForeignKey(Expense, on_delete=models.CASCADE, related_name='contributions')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contributions')
     share_amount = models.FloatField(default = 0)
 
+class ExpenseHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expense = models.ForeignKey(Expense, on_delete=models.CASCADE, related_name='expense_history')
+    updated_by =  models.ForeignKey(User, on_delete=models.SET_NULL, related_name='expense_history')
+    updated_at = models.DateTimeField(auto_now_add=True)
+    metadata = models.JSONField(null = True, blank=True, default=dict)
 
 

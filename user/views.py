@@ -71,7 +71,7 @@ class ResendEmailVerificationLink(generics.CreateAPIView):
             return Response({'message' : str(e)}, status=400)
 
 class UpdateUserProfileView(generics.GenericAPIView) :
-    queryset = User.objects.all()
+    queryset = User.objects.filter(is_deleted = False)
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     serializer_class = UserProfileEditSerializer
