@@ -183,25 +183,28 @@ class GroupBalance(models.Model):
 class Activity(models.Model):
     ACTIVITY_CHOICES = (
         ('group_created', 'Group Created'),
-        ('group_info_edited', 'Group Inforamtion Edited'),
+        ('group_simplified', 'Group Simplified'),
+        ('changed_group_name', 'Changed Group Name'),
+        ('changed_group_description', 'Changed Group Description'),
+        ('changed_group_icon', 'CHanged Group Icon'),
         ('group_deleted', 'Group Deleted'),
         ('member_invited', 'Member Invited to Join Group'),
         ('invitation_dropped', 'Reject/Cancel Invitation to Join Group'),
-        ('member_added', 'Member Added to Group'),
+        ('member_joined', 'Member Joined Group'),
         ('member_left', 'Member Left Group'),
+        ('member_removed', 'Member Left Group'),
         ('expense_added', 'Expense Added to Group'),
+        ('settledup', 'Settled Up with User'),
         ('expense_edited', 'Expense Edited in Group'),
         ('expense_deleted', 'Expense Deleted from Group'),
-        ('group_invitation_received', 'Group Invitation Received'),
-        ('settled_up_with_user', 'Settled Up with User'),
         # Add more choices as needed
     )
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     activity_type = models.CharField(null = False, blank=False, max_length=40, choices=ACTIVITY_CHOICES)
+    triggered_by = models.ForeignKey(User, null = True, default = None, on_delete=models.SET_NULL, related_name='activities_triggered')
+    triggered_at = models.DateTimeField(auto_now_add=True, editable=False)
     group = models.ForeignKey(Group, null = True, default = None, on_delete=models.SET_NULL, related_name='activites')
     users = models.ManyToManyField(User, symmetrical=False, related_name='activites')
-    triggered_by = models.ForeignKey(User, null = True, default = None, on_delete=models.SET_NULL, related_name='activities_triggored')
-    triggered_at = models.DateTimeField(auto_now_add=True, editable=False)
     metadata = models.JSONField(null = True, blank=True, default=dict)
     
     def __str__(self):

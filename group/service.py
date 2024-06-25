@@ -112,11 +112,11 @@ class GroupService:
     def get_group_balances(group):
         if group.is_simplified:
             return GroupService.simplify_balances(group=group)
-        return group.balances
+        return group.balances.all()
 
     @staticmethod
     def delete_group(user, group):
-        if user not in group.members:
+        if user not in group.members.all():
             raise Exception('Group does\'nt exists')
         
         metadata = {
@@ -126,8 +126,8 @@ class GroupService:
         
         activity = ActivityService.create_activity(
             type = 'group_deleted',
-            users = group.members,
-            triggored_by=user,
+            users = group.members.all(),
+            triggered_by=user,
             metadata=metadata
             )
         
@@ -139,15 +139,15 @@ class GroupService:
 
 class ActivityService:
     @staticmethod
-    def create_activity(type, users, triggored_by = None, group = None, metadata = {}):
+    def create_activity(type, users, triggered_by = None, group = None, metadata = {}):
         activity = Activity.objects.create(
             activity_type = type,
             group = group,
-            triggored_by = triggored_by,
+            triggered_by = triggered_by,
             metadata = metadata,
             )
         
-        activity.user.add(*users)
+        activity.users.add(*users)
         return activity
     
 

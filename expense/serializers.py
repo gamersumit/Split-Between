@@ -24,8 +24,16 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = '__all__'
-        read_only_fields = ['id', 'expense_type', 'created_at', 'updated_at', 'created_by']
+        read_only_fields = ['id', 'expense_type', 'total_amount', 'created_at', 'updated_at', 'created_by']
     
+    
+    def validate(self, attrs):
+        group = attrs['group']
+        paid_by = attrs['group']
+        
+        if paid_by not in group.members.all():
+            raise ValidationError('Only Group members can pay for an expense')
+
     def create(self, validated_data):
         validated_data['created_by'] = self.context['user']
         validated_data['expense_type'] = self.context['expense_type']

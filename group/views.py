@@ -37,8 +37,14 @@ class CreateGroupView(generics.CreateAPIView):
     operation_summary= "CREATE GROUP", operation_description = 'Create a new group to record all your expenses.', 
     ) 
     def post(self, request, *args, **kwargs):
-        return  super().post(request, *args, **kwargs)
+        try:
+            with transaction.atomic():
+                return  super().post(request, *args, **kwargs)
         
+        except Exception as e:
+            print("error in group creation: ", str(e))
+            return Response({'error': str(e)}, status=500)
+
 class SendGroupInvitationView(generics.CreateAPIView):
     serializer_class = PendingMembersSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -53,7 +59,15 @@ class SendGroupInvitationView(generics.CreateAPIView):
     operation_description = 'Any group member can send invite to users to join their expense group. One User can only be invited by one group member at a time.', 
     ) 
     def post(self, request, *args, **kwargs):
-        return  super().post(request, *args, **kwargs)
+        try:
+            with transaction.atomic() :
+                return  super().post(request, *args, **kwargs)
+        
+        except ValidationError as e :
+            return Response({'error' : str(e)}, status=403)
+            
+        except Exception as e:
+            return Response({"error" : str(e)}, status=500)
         
 class JoinGroupView(generics.RetrieveAPIView):
     serializer_class = MembershipSerializer
@@ -72,11 +86,13 @@ class JoinGroupView(generics.RetrieveAPIView):
         try:
             id = kwargs['id']
             invite = PendingMembers.objects.get(id = id)
+        
             if invite.user != request.user :
                 return Response({'error' : 'invitation not found'}, status=404)
             
-            member = Membership.objects.create(user = request.user.id, group = invite.group, added_by = invite.invited_by)
-            invite.delete()
+            with transaction.atomic():
+                member = Membership.objects.create(user = request.user, group = invite.group, added_by = invite.invited_by)
+                invite.delete()
             return Response(MembershipSerializer(member).data, status=200)
         except Exception as e:
             return Response({'error' : str(e)}, status=400)
@@ -136,7 +152,7 @@ class JoinedGroupsListView(generics.ListAPIView):
 class JoinedGroupDetailView(generics.RetrieveAPIView):
     serializer_class = GroupDeatilSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    lookup_field = 'id'
     def get_queryset(self):
        return self.request.user.groups_membership.all()
     
@@ -211,14 +227,18 @@ class UpdateGroupDetailsView(generics.UpdateAPIView):
         try:
             group = self.get_object()
             field = kwargs.get('field', None)
-            
+            print("request.data ===>", request.data)
             if field not in ['name', 'description', 'icon', 'simplified']:
                 return Response({'error': 'PAGE NOT FOUND'}, status=400)
             
 
             type = None
             icon = None
-            metadata = {'updated_by' : UserMiniProfileSerializer(request.user), 'group_name' : group.group_name}
+            metadata = {'updated_by' : {
+                                'username' : request.user.username, 
+                                'id' : str(request.user.id),
+                            }, 'group_name' : group.group_name}
+            print("metadata ===>", metadata)
             response = {'message' : 'request successful'}
             
             
@@ -232,14 +252,14 @@ class UpdateGroupDetailsView(generics.UpdateAPIView):
             if field == 'name' :
                 type = 'changed_group_name'
                 group.group_name = request.data['name']
-                metadata = {'new_name' : group.group_name}
+                metadata['new_name'] = group.group_name
                 
             if field == 'description' :
                 type = 'changed_group_description'
                 group.description = request.data['description']
             
             if field == 'icon' :
-                icon = CommonUtils.UploadMediaToCloud(icon)
+                icon = CommonUtils.UploadMediaToCloud(request.data['icon'])
                 type = 'changed_group_icon'
                 group.group_icon = icon
                 response = {'group_icon' : icon}
@@ -247,17 +267,15 @@ class UpdateGroupDetailsView(generics.UpdateAPIView):
                 
             with transaction.atomic():
                 group.save()
-                ActivityService.create_activity(type=type, group = group, users=group.members, metadata=metadata)
+                ActivityService.create_activity(type=type, group = group, triggered_by= request.user, users=group.members.all(), metadata=metadata)
             
             
-            return Response({'message': 'Debts simplified successfully', 'state' : group.is_simplified ,'balances' : balances}, status=status.HTTP_200_OK)
+            return Response(response, status=status.HTTP_200_OK)
         
         except Exception as e:
             if icon:
                 CommonUtils.delete_media_from_cloudinary([icon])
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 class UserActivityListView(generics.ListAPIView):
     serializer_class = ActivitySerializer

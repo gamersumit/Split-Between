@@ -71,15 +71,18 @@ def create_frienships_before_membership(sender, instance, **kwargs):
             GroupBalance.objects.bulk_create(balance)
 
 @receiver(post_save, sender = Membership)
-def create_member_added_activity(send, instance, created, **kwargs):
+def member_joined_activity(sender, instance, created, **kwargs):
     if created and instance.group.members.count() > 1:
         activity = ActivityService.create_activity(
             type = 'member_joined',
             group = instance.group,
-            users = instance.group.members,
+            users = instance.group.members.all(),
+            triggered_by = instance.user,
             metadata = {
-                'added_by' : UserMiniProfileSerializer(instance.added_by).data,
-                'user': UserMiniProfileSerializer(instance.user).data,
+                'added_by' : {
+                                'username' : instance.added_by.username, 
+                                'id' : str(instance.added_by.id),
+                            },
                 'group_name' : instance.group.group_name,
                 },
             )
@@ -91,26 +94,27 @@ def group_created_activity(sender, instance, created, **kwargs):
         Membership.objects.create(user = instance.creator, group = instance, added_by = instance.creator)
         activity = ActivityService.create_activity(
             type = 'group_created',
-            users = instance.members,
-            triggored_by=instance.user,
+            users = instance.members.all(),
+            triggered_by=instance.creator,
             group = instance,
             metadata = {
-                'creator' : UserMiniProfileSerializer(instance.creator).data,
                 'group_name' :  instance.group_name,
                 },
             )
 
         
 @receiver(post_save, sender = PendingMembers)
-def group_invitation_sent_activity(send, instance, created, **kwargs):
+def group_invitation_sent_activity(sender, instance, created, **kwargs):
     if created:
         activity = ActivityService.create_activity(
             type = 'member_invited',
             group = instance.group,
-            users = instance.group.members,
-            user = instance.invited_by,
+            users = instance.group.members.all(),
+            triggered_by = instance.invited_by,
             metadata = {
-                'invited_by' : UserMiniProfileSerializer(instance.invited_by).data,
-                'invited_user': UserMiniProfileSerializer(instance.user).data,
+                'invited_user': {
+                    'username' : instance.user.username, 
+                    'id' : str(instance.user.id),
+                                 },
                 },
             )
