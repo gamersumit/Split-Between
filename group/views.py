@@ -264,17 +264,19 @@ class UpdateGroupDetailsView(generics.UpdateAPIView):
                 group.group_icon = icon
                 response = {'group_icon' : icon}
                 
-                
-            with transaction.atomic():
-                group.save()
-                ActivityService.create_activity(type=type, group = group, triggered_by= request.user, users=group.members.all(), metadata=metadata)
+            try:    
+                with transaction.atomic():
+                    group.save()
+                    ActivityService.create_activity(type=type, group = group, triggered_by= request.user, users=group.members.all(), metadata=metadata)
             
-            
+            except Exception as e:
+                if icon:
+                    CommonUtils.delete_media_from_cloudinary([icon])
+
+                raise Exception(str(e))
             return Response(response, status=status.HTTP_200_OK)
         
         except Exception as e:
-            if icon:
-                CommonUtils.delete_media_from_cloudinary([icon])
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UserActivityListView(generics.ListAPIView):

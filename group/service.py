@@ -11,7 +11,7 @@ class GroupService:
     def simplify_balances(group):
         users = set()
         edges = []
-        balances = group.balances
+        balances = group.balances.all()
         for balance in balances:
             users.add(balance.friend_owes_id)
             users.add(balance.friend_owns_id)
