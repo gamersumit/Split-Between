@@ -14,7 +14,7 @@
 #                 'group' : {id : uuid, group_name : str},
 #             },
 
-# 3. GROUP NAME EDIT ACTIVITY (group_info_edited):
+# 3. GROUP NAME EDIT ACTIVITY (group_edited):
 # metadata = {
 #                'updated_by' : {id : uuid, user : str, avatar : url, etc},
 #                'group' : {id : uuid, group_name : str},
