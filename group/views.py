@@ -1,20 +1,12 @@
-from django.shortcuts import get_object_or_404
 from rest_framework import generics
-from rest_framework.views import APIView
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from django.utils import timezone
-
 from group.service import ActivityService
 from .serializers import *
 from rest_framework import permissions, status
-from django.contrib.auth import authenticate
-from user.models import User
-from utils.utils import CommonUtils, UserUtils
+from utils.utils import CommonUtils
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.decorators import api_view, permission_classes
 # Create your views here.
 class CreateGroupView(generics.CreateAPIView):
     serializer_class = GroupDeatilSerializer

@@ -1,10 +1,6 @@
-from functools import partial
-from django.utils import timezone
 from rest_framework import generics
 from rest_framework.views import APIView
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from django.utils import timezone
 from .serializers import *
 from .models import User
 from rest_framework.authtoken.models import Token
@@ -12,8 +8,6 @@ from rest_framework import permissions
 from django.contrib.auth import authenticate
 from user.models import User
 from utils.utils import CommonUtils, Mail, UserUtils
-from django.core.mail import send_mail
-from django.contrib.auth.views import LogoutView as DRFLogoutView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.parsers import MultiPartParser, FormParser
